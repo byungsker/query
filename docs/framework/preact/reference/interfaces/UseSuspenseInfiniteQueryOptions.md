@@ -3,9 +3,11 @@ id: UseSuspenseInfiniteQueryOptions
 title: UseSuspenseInfiniteQueryOptions
 ---
 
-# Interface: UseSuspenseInfiniteQueryOptions\<TQueryFnData, TError, TData, TQueryKey, TPageParam\>
+Defined in: [preact-query/src/types.ts:279](https://github.com/TanStack/query/blob/main/packages/preact-query/src/types.ts#L279)
 
-Defined in: [preact-query/src/types.ts:128](https://github.com/theVedanta/query/blob/main/packages/preact-query/src/types.ts#L128)
+The options accepted by `useSuspenseInfiniteQuery`. Same as [UseInfiniteQueryOptions](UseInfiniteQueryOptions.md), minus `enabled`,
+`throwOnError`, and `placeholderData` — Suspense hooks cannot render a "disabled" or "placeholder" state, so
+those options don't apply.
 
 ## Extends
 
@@ -17,21 +19,32 @@ Defined in: [preact-query/src/types.ts:128](https://github.com/theVedanta/query/
 
 `TQueryFnData` = `unknown`
 
+The type of a single page, as your `queryFn` resolves it.
+
 ### TError
 
 `TError` = `DefaultError`
 
+The type of errors your `queryFn` may throw.
+
 ### TData
 
-`TData` = `TQueryFnData`
+`TData` = `InfiniteData`\<`TQueryFnData`\>
+
+The type `data` ends up as after `select` runs — defaults to `InfiniteData<TQueryFnData>`,
+the shape of all fetched pages plus their page params.
 
 ### TQueryKey
 
 `TQueryKey` *extends* `QueryKey` = `QueryKey`
 
+The type of your `queryKey`.
+
 ### TPageParam
 
 `TPageParam` = `unknown`
+
+The type of the parameter passed to `queryFn` to fetch a given page.
 
 ## Properties
 
@@ -41,7 +54,10 @@ Defined in: [preact-query/src/types.ts:128](https://github.com/theVedanta/query/
 optional queryFn: QueryFunction<TQueryFnData, TQueryKey, TPageParam>;
 ```
 
-Defined in: [preact-query/src/types.ts:138](https://github.com/theVedanta/query/blob/main/packages/preact-query/src/types.ts#L138)
+Defined in: [preact-query/src/types.ts:293](https://github.com/TanStack/query/blob/main/packages/preact-query/src/types.ts#L293)
+
+`skipToken` is not allowed here — Suspense hooks cannot render a "disabled" state, so a query function
+must always be provided, unless a default query function has been defined.
 
 ***
 
@@ -51,10 +67,15 @@ Defined in: [preact-query/src/types.ts:138](https://github.com/theVedanta/query/
 optional subscribed: boolean;
 ```
 
-Defined in: [preact-query/src/types.ts:123](https://github.com/theVedanta/query/blob/main/packages/preact-query/src/types.ts#L123)
+Defined in: [preact-query/src/types.ts:258](https://github.com/TanStack/query/blob/main/packages/preact-query/src/types.ts#L258)
 
 Set this to `false` to unsubscribe this observer from updates to the query cache.
-Defaults to `true`.
+
+#### Default Value
+
+```ts
+true
+```
 
 #### Inherited from
 

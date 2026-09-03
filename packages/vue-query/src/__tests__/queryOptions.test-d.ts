@@ -5,6 +5,18 @@ import { queryKey } from '@tanstack/query-test-utils'
 import { QueryClient } from '../queryClient'
 import { queryOptions } from '../queryOptions'
 import { useQuery } from '../useQuery'
+import type { MaybeRefDeep } from '../types'
+
+// Regression test for exported queryOptions inference under declaration emit.
+// TypeScript should be able to name the return type without expanding the
+// internal data tag symbols into the consumer's .d.ts output.
+export const exportedQueryOptions = queryOptions({
+  queryKey: ['invalid'],
+})
+
+export const exportedQueryOptionsGetter = queryOptions(() => ({
+  queryKey: ['invalid'],
+}))
 
 describe('queryOptions', () => {
   it('should not allow excess properties', () => {
@@ -38,6 +50,25 @@ describe('queryOptions', () => {
 
     const { data } = reactive(useQuery(options))
     expectTypeOf(data).toEqualTypeOf<number | undefined>()
+  })
+  it('should work when passed to query', async () => {
+    const options = queryOptions({
+      queryKey: ['key'],
+      queryFn: () => Promise.resolve(5),
+    })
+
+    const data = await new QueryClient().query(options)
+    expectTypeOf(data).toEqualTypeOf<number>()
+  })
+  it('should work when passed to query with select', async () => {
+    const options = queryOptions({
+      queryKey: ['key'],
+      queryFn: () => Promise.resolve(5),
+      select: (data) => data.toString(),
+    })
+
+    const data = await new QueryClient().query(options)
+    expectTypeOf(data).toEqualTypeOf<string>()
   })
   it('should tag the queryKey with the result type of the QueryFn', () => {
     const key = queryKey()
@@ -297,5 +328,95 @@ describe('queryOptions', () => {
     })
 
     expectTypeOf(options.queryKey).not.toBeUndefined()
+  })
+
+  it('should allow computed ref as queryKey', () => {
+    const id = ref<string | null>('1')
+
+    // This was broken in #10452, the #10465 fix only covered `enabled`
+    const options = queryOptions({
+      queryKey: computed(() => ['foo', id.value] as const),
+      queryFn: () => Promise.resolve({ id: '1' }),
+    })
+
+    expectTypeOf(options.queryKey).not.toBeUndefined()
+  })
+
+  it('should allow ref as queryKey', () => {
+    const keyRef = ref(['foo', '1'] as const)
+
+    const options = queryOptions({
+      queryKey: keyRef,
+      queryFn: () => Promise.resolve({ id: '1' }),
+    })
+
+    expectTypeOf(options.queryKey).not.toBeUndefined()
+  })
+
+  it('should allow getter function as queryKey', () => {
+    const id = ref<string | null>('1')
+
+    const options = queryOptions({
+      queryKey: () => ['foo', id.value] as const,
+      queryFn: () => Promise.resolve({ id: '1' }),
+    })
+
+    expectTypeOf(options.queryKey).not.toBeUndefined()
+  })
+
+  it('should work with branded queryKey', () => {
+    type PostId = string & { readonly __brand: 'PostId' }
+    const postId = '123' as PostId
+
+    const options = queryOptions({
+      queryKey: ['post', postId],
+      queryFn: () => Promise.resolve({ id: postId }),
+    })
+
+    expectTypeOf(options.queryKey).not.toBeUndefined()
+
+    const { data } = reactive(useQuery(options))
+    expectTypeOf(data).toEqualTypeOf<{ id: PostId } | undefined>()
+  })
+
+  it('should work with branded queryKey inside MaybeRefOrGetter', () => {
+    type PostId = string & { readonly __brand: 'PostId' }
+    const postId = '123' as PostId
+
+    const simpleOptions = queryOptions({
+      queryKey: ['post', postId],
+      queryFn: () => Promise.resolve({ id: postId }),
+    })
+    const { data: simpleData } = reactive(useQuery(simpleOptions))
+    expectTypeOf(simpleData).toEqualTypeOf<{ id: PostId } | undefined>()
+
+    const nestedOptions = queryOptions({
+      queryKey: ['post', { postId }],
+      queryFn: () => Promise.resolve({ id: postId }),
+    })
+    const { data: nestedData } = reactive(useQuery(nestedOptions))
+    expectTypeOf(nestedData).toEqualTypeOf<{ id: PostId } | undefined>()
+
+    const { data: inlineData } = reactive(
+      useQuery({
+        queryKey: ['post', { postId }],
+        queryFn: () => Promise.resolve({ id: postId }),
+      }),
+    )
+    expectTypeOf(inlineData).toEqualTypeOf<{ id: PostId } | undefined>()
+  })
+
+  it('should recursively unwrap objects with a __brand property', () => {
+    const options = {
+      __brand: 'post' as const,
+      postId: ref('123'),
+    } satisfies MaybeRefDeep<{
+      __brand: 'post'
+      postId: string
+    }>
+
+    expectTypeOf(options.postId).toMatchTypeOf<
+      string | ReturnType<typeof ref>
+    >()
   })
 })

@@ -1,11 +1,11 @@
 import type { DeepUnwrapRef, MaybeRefOrGetter, ShallowOption } from './types'
 import type {
-  DataTag,
   DefaultError,
   InitialDataFunction,
   NonUndefinedGuard,
   QueryBooleanOption,
   QueryKey,
+  QueryKeyWithDataTag,
   QueryObserverOptions,
 } from '@tanstack/query-core'
 
@@ -31,13 +31,15 @@ export type QueryOptions<
             TQueryData,
             DeepUnwrapRef<TQueryKey>
           >)
-    : QueryObserverOptions<
-        TQueryFnData,
-        TError,
-        TData,
-        TQueryData,
-        DeepUnwrapRef<TQueryKey>
-      >[Property]
+    : Property extends 'queryKey'
+      ? MaybeRefOrGetter<TQueryKey>
+      : QueryObserverOptions<
+          TQueryFnData,
+          TError,
+          TData,
+          TQueryData,
+          DeepUnwrapRef<TQueryKey>
+        >[Property]
 } & ShallowOption
 
 export type UndefinedInitialQueryOptions<
@@ -63,6 +65,22 @@ export type DefinedInitialQueryOptions<
     | (() => NonUndefinedGuard<TQueryFnData>)
 }
 
+export type UndefinedInitialQueryOptionsWithDataTag<
+  TQueryFnData = unknown,
+  TError = DefaultError,
+  TData = TQueryFnData,
+  TQueryKey extends QueryKey = QueryKey,
+> = UndefinedInitialQueryOptions<TQueryFnData, TError, TData, TQueryKey> &
+  QueryKeyWithDataTag<TQueryKey, TQueryFnData, TError>
+
+export type DefinedInitialQueryOptionsWithDataTag<
+  TQueryFnData = unknown,
+  TError = DefaultError,
+  TData = TQueryFnData,
+  TQueryKey extends QueryKey = QueryKey,
+> = DefinedInitialQueryOptions<TQueryFnData, TError, TData, TQueryKey> &
+  QueryKeyWithDataTag<TQueryKey, TQueryFnData, TError>
+
 export function queryOptions<
   TQueryFnData = unknown,
   TError = DefaultError,
@@ -70,9 +88,7 @@ export function queryOptions<
   TQueryKey extends QueryKey = QueryKey,
 >(
   options: DefinedInitialQueryOptions<TQueryFnData, TError, TData, TQueryKey>,
-): DefinedInitialQueryOptions<TQueryFnData, TError, TData, TQueryKey> & {
-  queryKey: DataTag<TQueryKey, TQueryFnData, TError>
-}
+): DefinedInitialQueryOptionsWithDataTag<TQueryFnData, TError, TData, TQueryKey>
 
 export function queryOptions<
   TQueryFnData = unknown,
@@ -86,9 +102,12 @@ export function queryOptions<
     TData,
     TQueryKey
   >,
-): () => DefinedInitialQueryOptions<TQueryFnData, TError, TData, TQueryKey> & {
-  queryKey: DataTag<TQueryKey, TQueryFnData, TError>
-}
+): () => DefinedInitialQueryOptionsWithDataTag<
+  TQueryFnData,
+  TError,
+  TData,
+  TQueryKey
+>
 
 export function queryOptions<
   TQueryFnData = unknown,
@@ -97,9 +116,12 @@ export function queryOptions<
   TQueryKey extends QueryKey = QueryKey,
 >(
   options: UndefinedInitialQueryOptions<TQueryFnData, TError, TData, TQueryKey>,
-): UndefinedInitialQueryOptions<TQueryFnData, TError, TData, TQueryKey> & {
-  queryKey: DataTag<TQueryKey, TQueryFnData, TError>
-}
+): UndefinedInitialQueryOptionsWithDataTag<
+  TQueryFnData,
+  TError,
+  TData,
+  TQueryKey
+>
 
 export function queryOptions<
   TQueryFnData = unknown,
@@ -113,14 +135,12 @@ export function queryOptions<
     TData,
     TQueryKey
   >,
-): () => UndefinedInitialQueryOptions<
+): () => UndefinedInitialQueryOptionsWithDataTag<
   TQueryFnData,
   TError,
   TData,
   TQueryKey
-> & {
-  queryKey: DataTag<TQueryKey, TQueryFnData, TError>
-}
+>
 
 export function queryOptions(options: unknown) {
   return options
